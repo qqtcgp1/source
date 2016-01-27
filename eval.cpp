@@ -21,7 +21,7 @@ FEBio_input_config::FEBio_input_config(const std::string file_name): E_position(
 void FEBio_input_config::initialize() {
     std::string prior_E = "<material id=\"1\"";
     std::string E_string = "<E>";
-    std::string T_string = "<T0 lc=\"1\">";
+    std::string T_string = "<loadpoint>1,";
     std::ifstream file_stream_local( file_name, std::ios::in | std::ios::binary);
     check_openfile(file_stream_local);
     
@@ -54,8 +54,13 @@ void FEBio_input_config::operator() (floatT E, floatT T) const{
     
     file_stream.seekp(E_position);
     file_stream << std::fixed << std::scientific << std::setprecision(PRECISION) << E;
+    
+    
+    
     file_stream.seekp(T_position);
     file_stream << std::setprecision(PRECISION) << T;
+    
+    
     file_stream.close();
     return;
 }

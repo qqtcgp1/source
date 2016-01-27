@@ -17,20 +17,20 @@ typedef double floatT;   ///floating point type. can be float, double, currently
 #define BUFSIZE 512  ///for file names
 
 ///file names
-#define FEBio_FILENAME "./27Nov.feb"   ///this is the name of the .feb file. The program won't change this file. Instead it creates copies named ./26Aug_2_0, ./26Aug_2_1 for different threads.
+#define FEBio_FILENAME "./27Jan.feb"   ///this is the name of the .feb file. The program won't change this file. Instead it creates copies named ./26Aug_2_0, ./26Aug_2_1 for different threads.
 
 #define MATLAB_OUTPUT "./Matlab_output.dat"
 #define IDEALIZED_DATA "./idealized_data.log"
 
 ///the directory of FEBio, on Yu's iMac
 #ifdef yuMac
-#define RUN_FEBIO_COMMAND "/Applications/FEBio2.3.0/bin/FEBio2 -nosplash > null"
+#define RUN_FEBIO_COMMAND "/Applications/FEBio2.3.0/bin/FEBio2 -nosplash"
 #endif
 
 #ifdef LenovoDebian
 ///the directory of FEBio, on Yu's lenovo laptop
 
-#define RUN_FEBIO_COMMAND "/home/yuquan/febio-2.4.0-packaged/bin/febio2.lnx64 -nosplash > null"
+#define RUN_FEBIO_COMMAND "/home/yuquan/febio-2.4.0-packaged/bin/febio2.lnx64 -nosplash"
 #endif
 
 #define NUM_THREADS 4
