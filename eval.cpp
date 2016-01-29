@@ -293,16 +293,18 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     
     
     ///check if log file contains "E R R O R   T E R M I N A T I O N" at the end of the file
+    FileSizeT fileSize = get_filesize( log_filename[thread_num]);
     std::ifstream stream(log_filename[thread_num], std::ios::in);
-    stream.seekg(50, std::ios::end);
+    stream.seekg( fileSize - 60);
     char end_of_file[55];
-    stream.read(end_of_file, 49);
+    stream.read(end_of_file, 54);
     stream.close();
     char* result = nullptr;
-    result = strstr( end_of_file, " E R R O R ");
+    result = strstr(end_of_file, " E R R O R ");
     
     ///if it does contain this, then this particular member is invalid, assign it a maximal cost.
     if (result != nullptr) {
+        std::cout << "5\n";
         t_tmp.fa_cost[0] = 100.0;
         return t_tmp;
     }
