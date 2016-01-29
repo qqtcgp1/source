@@ -95,6 +95,12 @@ int main(int argc, char *argv[])
                 strcpy(binary_output.crash_filename, optarg);
                 break;
                 
+            case 'g':
+                grid_evaluate(0.005,0.001,0.2, 0.1,0.1,20);
+                return 0;
+                break;
+                
+                
             case '?':
                 if (optopt == 'i' || optopt == 'o' || optopt == 'p' || optopt == 'b'|| optopt == 't' || optopt == 'f' || optopt == 'c')
                     std::cerr << "Option -"<<char(optopt)<<" requires an argument.\n";
@@ -132,16 +138,26 @@ int main(int argc, char *argv[])
     de.optimize();
     
     return 0;
+}
 
-    
-    
+
+void grid_evaluate(floatT min1, floatT int1, floatT max1, floatT min2, floatT int2, floatT max2) {
     ///below is for evaluating objective function at specified grid
-    /*
-     long i;
-     t_pop t;
-     t.fa_vector[0] = 0.02; t.fa_vector[1] = 0.1;
-     evaluate(2,t,&i,&t,20);
-     std::cout << t.fa_cost[0];*/
+    
+    t_pop t;
+    floatT x1, x2;
+    std::ifstream file("grid_evaluate.dat", std::ios::out);
+    
+    for (x1 = min1; x1 <= max1; x1 += int1) {
+        for (x2 = min2; x2 <= max2; x2 += int2) {
+            t.fa_vector[0] = x1; t.fa_vector[1] = x2;
+            evaluate(2,t,&i,&t,20);
+            file << t.fa_vector[0] << "   " << t.fa_vector[1] << "   " << t.fa_cost[0] << '\n' << std::flush;
+        }
+    }
+    
+    file.close();
+
     /*
      t_pop t_tmp[4];
      long l_nf = 0;

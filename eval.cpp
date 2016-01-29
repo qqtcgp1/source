@@ -199,6 +199,14 @@ floatT compare( const floatTArray3D& FE_outcome) {
         ////add the image registration optimization here
         ///something like  best_cost = optimize(p1,p2)...
         ///gpc_polygon_clip(GPC_INT, &p_FE, &array_p_true_data[i], &p_int);
+        
+        //FILE* p1file = fopen("p1file.dat", "w");
+        //FILE* p2file = fopen("p2file.dat", "w");
+        
+        //gpc_write_polygon(p1file, 1, P_FE);
+        //gpc_write_polygon(p2file, 1, P_TRUE_DATA);
+        
+        //fclose(p1file); fclose(p2file);
 
         registration.clean(); registration.objective_function = &evaluate2;
         registration.optimize();
