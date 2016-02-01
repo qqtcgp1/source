@@ -24,6 +24,8 @@ DE* GLOBAL_DE_PTR = nullptr;
 char CRASH_SAVE[90000];
 unsigned long long byteSize;
 
+void grid_evaluate(floatT min1, floatT int1, floatT max1, floatT min2, floatT int2, floatT max2);
+
 void my_handler(int i) {
     if (GLOBAL_DE_PTR->binary_output.crash_save) {
         std::ofstream crash_file(GLOBAL_DE_PTR->binary_output.crash_filename, std::ios::out | std::ios::binary);
@@ -58,7 +60,7 @@ int main(int argc, char *argv[])
     
     ///parse shell command
     char option;
-    while ((option = getopt(argc, argv, "i:o:p:r:b:t:f:c:")) != -1)
+    while ((option = getopt(argc, argv, "i:o:p:r:b:t:f:c:g")) != -1)
         switch (option) {
             case 'i':   ///intput filename
                 strcpy(de_input_filename, optarg);
@@ -96,7 +98,7 @@ int main(int argc, char *argv[])
                 break;
                 
             case 'g':
-                grid_evaluate(0.005,0.001,0.2, 0.1,0.1,20);
+                grid_evaluate(0.005,0.2/60.0,0.2, 0.1,20.0/60.0,20);
                 return 0;
                 break;
                 
@@ -144,9 +146,11 @@ int main(int argc, char *argv[])
 void grid_evaluate(floatT min1, floatT int1, floatT max1, floatT min2, floatT int2, floatT max2) {
     ///below is for evaluating objective function at specified grid
     
+    std::cout << "1\n";
     t_pop t;
     floatT x1, x2;
-    std::ifstream file("grid_evaluate.dat", std::ios::out);
+    std::ofstream file("grid_evaluate.dat", std::ios::out);
+    long i = 0;
     
     for (x1 = min1; x1 <= max1; x1 += int1) {
         for (x2 = min2; x2 <= max2; x2 += int2) {
@@ -157,36 +161,6 @@ void grid_evaluate(floatT min1, floatT int1, floatT max1, floatT min2, floatT in
     }
     
     file.close();
-
-    /*
-     t_pop t_tmp[4];
-     long l_nf = 0;
-     
-     floatT E1[NN+1];
-     floatT E2[NN+1];
-     for (int i = 0; i < NN+1; ++i) {
-     E1[i] = 0.015 + i * (0.025 - 0.015)/NN;
-     E2[i] = 0.085 + i * (0.115-0.085)/NN;
-     }
-     
-     std::ofstream grid_result("grid_result2.dat", std::ios::out);
-     
-     t_tmp[0].fa_vector[0] = 0.015;
-     t_tmp[0].fa_vector[1] = 0.1;
-     evaluate(2,t_tmp[0], &l_nf, t_tmp, 20);
-     
-     for (int i = 0; i < NN+1; ++i) {
-     ///#pragma omp parallel for num_threads(4)
-     for (int j = 0; j < NN+1; ++j) {
-     const int thread_num = omp_get_thread_num();
-     t_tmp[thread_num].fa_vector[0] = E1[i];
-     t_tmp[thread_num].fa_vector[1] = E2[j];
-     evaluate(2,t_tmp[thread_num], &l_nf, t_tmp, 20);
-     
-     #pragma omp critical(output)
-     grid_result << E1[i] << ' ' << E2[j] << ' ' << std::setprecision(15) << t_tmp[thread_num].fa_cost[0] << '\n' << std::flush;
-     }
-     }
-     */
 }
+
 
