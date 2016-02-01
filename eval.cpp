@@ -96,6 +96,7 @@ t_pop evaluate2(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const 
     ///the cost is the negative of the area of intersection
     t_tmp.fa_cost[0] = -gpc_polygon_area(&p_int);
     
+    gpc_free_polygon( &p_int );
     return t_tmp;
 }
 
@@ -316,6 +317,7 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
         t_tmp.fa_cost[0] = 100.0;
         return t_tmp;
     }
+    
     const floatTArray3D FE_outcome = read_FEBio_log(log_filename[thread_num],Matlab_output_data.n_boundary_nodes, Matlab_output_data.boundary_node_index);
     
     ///compare the boundary_nodes, using Matlab Engine, with the true data, and produce a cost
