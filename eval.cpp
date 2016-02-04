@@ -8,6 +8,7 @@
 #include "gpc.h"
 #include <gsl/gsl_statistics.h>
 #include "file_processing.h"
+#include "../febiosource_osx2.4.0_icccompile_asfunction/FEBio2/FEBio.h"
 
 
 gpc_polygon* P_TRUE_DATA = nullptr;
@@ -101,7 +102,7 @@ t_pop evaluate2(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const 
 }
 
 
-floatT compare( const floatTArray3D& FE_outcome) {
+floatT compare( const floatTArray3D& FE_outcome ) {
     static bool first_time = 1;///second entry onwards, this will become 0
     
     ///for pminx, pminy
@@ -291,7 +292,10 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     change_parameters( t_tmp.fa_vector[0], t_tmp.fa_vector[1]);
     ////change_parameters( 0.0200, 0.1000);
     
-    system(command[thread_num]);
+    ///system(command[thread_num]);
+    char* arguments[] = {"./febio2.osx", "-nosplash", "-i", "./27Jan_0.feb"};
+    febio(4, arguments);
+    
     
     ///passing the time taken by FEBio in seconds
     /*if (FE_running_time) {

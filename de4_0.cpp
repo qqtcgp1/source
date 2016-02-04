@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
                 break;
                 
             case 'g':
-                grid_evaluate(0.005,0.2/60.0,0.2, 0.1,20.0/60.0,20);
+                grid_evaluate(0.2,0.2/60.0,0.5, 0.1,20.0/60.0,14);
                 return 0;
                 break;
                 
@@ -149,7 +149,7 @@ void grid_evaluate(floatT min1, floatT int1, floatT max1, floatT min2, floatT in
     std::cout << "1\n";
     t_pop t;
     floatT x1, x2;
-    std::ofstream file("grid_evaluate.dat", std::ios::out);
+    std::ofstream file("grid_evaluate2.dat", std::ios::out);
     long i = 0;
     
     for (x1 = min1; x1 <= max1; x1 += int1) {
