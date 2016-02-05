@@ -58,7 +58,7 @@ DE::DE(std::ifstream& stream) {
     free(line);
 }
 
-void DE::optimize() {
+void DE::optimize2() {
     std::ofstream output_text, dump_text, dump_binary;
     
     if (text_output.output_frequency >= 1)
@@ -68,7 +68,6 @@ void DE::optimize() {
         dump_text.open(text_output.dump_filename, std::ios::out);
     
     output_text << "iteration   best cost  parameters   worst cost   CoeffOfVariation" << '\n' << std::flush;
-
     
     
 #define URN_DEPTH   5   //4 + one index to avoid
@@ -97,8 +96,9 @@ void DE::optimize() {
         {
             ta_pop[0].fa_vector[j] = fa_minbound[j]+genrand()*(fa_maxbound[j] - fa_minbound[j]);
         }
+        
         ta_pop[0]      = objective_function(i_D,ta_pop[0],&l_nfeval,&ta_pop[0],i_NP);
-
+        
         t_best  = ta_pop[0];
         
         for (i=1; i<i_NP; i++)
@@ -171,11 +171,371 @@ void DE::optimize() {
     {
         //----computer dithering factor (if needed)-----------------
         f_dither = f_weight + genrand()*(1.0 - f_weight);
-
+        
         //----start of loop through ensemble------------------------
         for (i=0; i<i_NP; i++)
         {
+            
+            {
+                ///do for every population member
+                permute(ia_urn2,URN_DEPTH,i_NP,i, &generator); //Pick 4 random and distinct
+                
+                i_r1 = ia_urn2[1];                 //population members
+                i_r2 = ia_urn2[2];
+                i_r3 = ia_urn2[3];
+                i_r4 = ia_urn2[4];
+                
+                //========Choice of strategy=======================================================
+                //---classical strategy DE/rand/1/bin-----------------------------------------
+                
+                
+                ///computes based on random generator, the parameters, for all populations. This differentiates the different strategies.
+                
+                if (i_strategy == 1)
+                {
+                    assigna2b(i_D,ta_pop[i_pta_old +i].fa_vector,t_tmp.fa_vector);
+                    j = (int)(genrand()*i_D); // random parameter
+                    k = 0;
+                    
+                    do
+                    {                            // add fluctuation to random target
+                        t_tmp.fa_vector[j] = ta_pop[i_pta_old +i_r1].fa_vector[j] + f_weight*(ta_pop[i_pta_old +i_r2].fa_vector[j]-ta_pop[i_pta_old +i_r3].fa_vector[j]);
+                        
+                        j = (j+1)%i_D;
+                        k++;
+                    }while((genrand() < f_cross) && (k < i_D));
+                    
+                    if (b_bound_constr)
+                        assigna2b(i_D,ta_pop[i_pta_old +i_r1].fa_vector,t_origin.fa_vector);
+                }
+                //---DE/local-to-best/1/bin---------------------------------------------------
+                else if (i_strategy == 2)
+                {
+                    assigna2b(i_D,ta_pop[i_pta_old +i].fa_vector,t_tmp.fa_vector);
+                    j = (int)(genrand()*i_D); // random parameter
+                    k = 0;
+                    do
+                    {                            // add fluctuation to random target
+                        t_tmp.fa_vector[j] = t_tmp.fa_vector[j] + f_weight*(t_bestit.fa_vector[j] - t_tmp.fa_vector[j]) +
+                        f_weight*(ta_pop[i_pta_old +i_r2].fa_vector[j]-ta_pop[i_pta_old +i_r3].fa_vector[j]);
+                        
+                        j = (j+1)%i_D;
+                        k++;
+                    }while((genrand() < f_cross) && (k < i_D));
+                    
+                    if (b_bound_constr)
+                        assigna2b(i_D,t_tmp.fa_vector,t_origin.fa_vector);
+                }
+                //---DE/best/1/bin with jitter------------------------------------------------
+                else if (i_strategy == 3)
+                {
+                    assigna2b(i_D,ta_pop[i_pta_old +i].fa_vector,t_tmp.fa_vector);
+                    j = (int)(genrand()*i_D); // random parameter
+                    k = 0;
+                    do
+                    {                            // add fluctuation to random target
+                        f_jitter = (0.0001*genrand()+f_weight);
+                        t_tmp.fa_vector[j] = t_bestit.fa_vector[j] + f_jitter*(ta_pop[i_pta_old +i_r1].fa_vector[j]-ta_pop[i_pta_old +i_r2].fa_vector[j]);
+                        
+                        j = (j+1)%i_D;
+                        k++;
+                    }while((genrand() < f_cross) && (k < i_D));
+                    if (b_bound_constr)
+                        assigna2b(i_D,t_tmp.fa_vector,t_origin.fa_vector);
+                }
+                //---DE/rand/1/bin with per-vector-dither-------------------------------------
+                else if (i_strategy == 4)
+                {
+                    assigna2b(i_D,ta_pop[i_pta_old +i].fa_vector,t_tmp.fa_vector);
+                    j = (int)(genrand()*i_D); // random parameter
+                    k = 0;
+                    do
+                    {                            // add fluctuation to random target
+                        t_tmp.fa_vector[j] = ta_pop[i_pta_old +i_r1].fa_vector[j] +
+                        (f_weight + genrand()*(1.0 - f_weight))*
+                        (ta_pop[i_pta_old +i_r2].fa_vector[j]-ta_pop[i_pta_old +i_r3].fa_vector[j]);
+                        
+                        j = (j+1)%i_D;
+                        k++;
+                    }while((genrand() < f_cross) && (k < i_D));
+                    if (b_bound_constr)
+                        assigna2b(i_D,t_tmp.fa_vector,t_origin.fa_vector);
+                }
+                //---DE/rand/1/bin with per-generation-dither---------------------------------
+                else if (i_strategy == 5)
+                {
+                    assigna2b(i_D,ta_pop[i_pta_old +i].fa_vector,t_tmp.fa_vector);
+                    j = (int)(genrand()*i_D); // random parameter
+                    k = 0;
+                    do
+                    {                            // add fluctuation to random target
+                        t_tmp.fa_vector[j] = ta_pop[i_pta_old +i_r1].fa_vector[j] + f_dither*(ta_pop[i_pta_old +i_r2].fa_vector[j]-ta_pop[i_pta_old +i_r3].fa_vector[j]);
+                        
+                        j = (j+1)%i_D;
+                        k++;
+                    }while((genrand() < f_cross) && (k < i_D));
+                    if (b_bound_constr)
+                        assigna2b(i_D,t_tmp.fa_vector,t_origin.fa_vector);
+                }
+                //---variation to DE/rand/1/bin: either-or-algorithm--------------------------
+                else
+                {
+                    assigna2b(i_D,ta_pop[i_pta_old +i].fa_vector,t_tmp.fa_vector);
+                    j = (int)(genrand()*i_D); // random parameter
+                    k = 0;
+                    if (genrand() < 0.5) //Pmu = 0.5
+                    {//differential mutation
+                        do
+                        {                            // add fluctuation to random target
+                            t_tmp.fa_vector[j] = ta_pop[i_pta_old +i_r1].fa_vector[j] + f_weight*(ta_pop[i_pta_old +i_r2].fa_vector[j]-ta_pop[i_pta_old +i_r3].fa_vector[j]);
+                            
+                            j = (j+1)%i_D;
+                            k++;
+                        }while((genrand() < f_cross) && (k < i_D));
+                    }
+                    else
+                    {//recombination with K = 0.5*(F+1) --> F-K-Rule
+                        do
+                        {                            // add fluctuation to random target
+                            t_tmp.fa_vector[j] = ta_pop[i_pta_old +i_r1].fa_vector[j] + 0.5*(f_weight+1.0)*
+                            (ta_pop[i_pta_old +i_r2].fa_vector[j]+ta_pop[i_pta_old +i_r3].fa_vector[j] -
+                             2*ta_pop[i_pta_old +i_r1].fa_vector[j]);
+                            
+                            j = (j+1)%i_D;
+                            k++;
+                        }while((genrand() < f_cross) && (k < i_D));
+                    }
+                    if (b_bound_constr)
+                        assigna2b(i_D,ta_pop[i_pta_old +i_r1].fa_vector,t_origin.fa_vector);
+                }//end if (gi_strategy ...
+                
+                
+                ///if parameter is out of bound, then do this:
+                if (b_bound_constr)
+                    for (j=0; j<i_D; j++) //----boundary constraints via random reinitialization-------
+                    {                      //----and bounce back----------------------------------------
+                        if (t_tmp.fa_vector[j] < fa_minbound[j])
+                        {
+                            t_tmp.fa_vector[j] = fa_minbound[j]+genrand()*(t_origin.fa_vector[j] - fa_minbound[j]);
+                        }
+                        if (t_tmp.fa_vector[j] > fa_maxbound[j])
+                        {
+                            t_tmp.fa_vector[j] = fa_maxbound[j]+genrand()*(t_origin.fa_vector[j] - fa_maxbound[j]);
+                        }
+                    }
+            }
+            
+            ///computes the cost function
+            //------Trial mutation now in t_tmp-----------------
+            t_tmp = objective_function(i_D,t_tmp,&l_nfeval,&ta_pop[i_pta_old +0],i_NP);  // Evaluate mutant in t_tmp[]
+            
+            {
+                restarting_loop = 0;
+                
+                if (b_bs_flag)
+                {
+                    ta_pop[i_pta_new +i]=t_tmp; //save new vector, selection will come later
+                }
+                else
+                {
+                    if (left_vector_wins(t_tmp,ta_pop[i_pta_old +i]) == true)
+                    {
+                        ta_pop[i_pta_new +i]=t_tmp;              // replace target with mutant
+                        
+                        if (left_vector_wins(t_tmp,t_best) == true)// Was this a new minimum?
+                        {                               // if so...
+                            t_best = t_tmp;             // store best member so far
+                        }                               // If mutant fails the test...
+                    }                                  // go to next the configuration
+                    else
+                    {
+                        ta_pop[i_pta_new +i]=ta_pop[i_pta_old +i];              // replace target with old value
+                    }
+                }//if (b_bs_flag)
+            }
+            // End mutation loop through pop.
+            
+            if (b_bs_flag)
+            {
+                sort_t_pop (ta_pop+i_pta_old, 2*i_NP); //sort array of parents + children
+                t_best = ta_pop[i_pta_old +0];
+            }
+            else
+            {
+                i_pta_swap = i_pta_old;
+                i_pta_old  = i_pta_new;
+                i_pta_new  = i_pta_swap;
+            }//if (b_bs_flag)
+            
+            i_pta_current = i_pta_old;
+            t_bestit = t_best;
+            
+            
+            //======Output Part=====================================================
+            
+            if ((text_output.output_frequency >= 1) && (i_gen%text_output.output_frequency == 0))
+            {
+                output_text << std::setw(6) << i_gen << std::setprecision(6) << std::setw(12) <<
+                t_best.fa_cost[0] << std::setw(12) << t_best.fa_vector[0] << "  " << std::setw(12) << t_best.fa_vector[1];
+            }
+            
+            if (text_output.screen_output)
+            {
+                std::cout << "iteration " << std::setw(6) << i_gen <<"  best cost  " << std::setprecision(6) << std::setw(12) <<
+                t_best.fa_cost[0] << "  parameters  " << std::setw(12) << t_best.fa_vector[0] << "  " << std::setw(12) << t_best.fa_vector[1];
+            }
+            
+            if ((text_output.dump_frequency >= 1) && (i_gen%text_output.dump_frequency == 0))
+            {
+                dump_text << "after iteration " << i_gen << '\n' << (*this) << std::flush;
+            }
+            
+            if ((binary_output.dump_frequency >= 1) && (i_gen%binary_output.dump_frequency == 0))
+            {
+                dump_binary.open(binary_output.dump_filename, std::ios::binary);
+                WRITE_BINARY(dump_binary, *this);
+                dump_binary.close();
+            }
+            
+            if (text_output.crash_save) {
+                //std::ofstream save_stream("crash.crash", std::ios::out | std::ios::binary);
+                //WRITE_BINARY(save_stream, *this);
+                //save_stream.close();
+                byteSize = sizeof(*this);
+                memcpy(CRASH_SAVE, reinterpret_cast<const char*> (this), byteSize);
+            }
+        }
+        
+        ++i_gen;
+        
+    } while (!terminate(buffer) && ( ((text_output.output_frequency >= 1) && ((i_gen-1)%text_output.output_frequency == 0))? bool(output_text<<buffer<<std::flush):1));
+}
 
+
+
+void DE::optimize() {
+    std::ofstream output_text, dump_text, dump_binary;
+    
+    if (text_output.output_frequency >= 1)
+        output_text.open(text_output.output_filename, std::ios::out);
+    
+    if (text_output.dump_frequency >= 1)
+        dump_text.open(text_output.dump_filename, std::ios::out);
+    
+    output_text << "iteration   best cost  parameters   worst cost   CoeffOfVariation" << '\n' << std::flush;
+    
+    
+#define URN_DEPTH   5   //4 + one index to avoid
+    int   i, j, k;
+    int   i_r1, i_r2, i_r3, i_r4;
+    const int i_refresh = 1;
+    int   ia_urn2[URN_DEPTH];
+    floatT f_jitter, f_dither;
+    t_pop t_tmp, t_origin;
+    int restarting_loop = 0; ///for restart algorithm
+    
+    char buffer[99];
+    
+    ///if initialization has not completed, redo from the start.
+    if (i_gen == 0) {
+        l_nfeval = 0;
+    }
+    
+    if (l_nfeval == 0) {
+        assert(i_gen == 0);
+        
+        i_pta_current = 0;
+        
+        //------Initialization-----------------------------
+        for (j=0; j<i_D; j++)
+        {
+            ta_pop[0].fa_vector[j] = fa_minbound[j]+genrand()*(fa_maxbound[j] - fa_minbound[j]);
+        }
+        
+        ta_pop[0]      = objective_function(i_D,ta_pop[0],&l_nfeval,&ta_pop[0],i_NP);
+        
+        t_best  = ta_pop[0];
+        
+        for (i=1; i<i_NP; i++)
+        {
+            for (j=0; j<i_D; j++)
+            {
+                ta_pop[i].fa_vector[j] = fa_minbound[j]+genrand()*(fa_maxbound[j] - fa_minbound[j]);
+                
+            }
+        }
+        
+#pragma omp parallel for num_threads (NUM_THREADS)
+        for (i = 1; i < i_NP; ++i) {
+            
+            ta_pop[i] = objective_function(i_D,ta_pop[i],&l_nfeval,&ta_pop[0],i_NP);
+            
+#pragma omp critical( line117core )
+            if (left_vector_wins(ta_pop[i],t_best) == true)
+            {
+                t_best = ta_pop[i];
+            }
+        }
+        
+        ///output part of initialization iteration
+        if (text_output.output_frequency == 1)
+        {
+            output_text << std::setw(6) << i_gen << std::setprecision(6) << std::setw(12) <<
+            t_best.fa_cost[0] << std::setw(12) << t_best.fa_vector[0] << "  " << std::setw(12) << t_best.fa_vector[1] << '\n' << std::flush;
+        }
+        
+        if (text_output.screen_output)
+        {
+            std::cout << "iteration " << std::setw(6) << i_gen <<"  best cost  " << std::setprecision(6) << std::setw(12) <<
+            t_best.fa_cost[0] << "  parameters  " << std::setw(12) << t_best.fa_vector[0] << "  " << std::setw(12) << t_best.fa_vector[1] << '\n';
+        }
+        
+        if (text_output.dump_frequency == 1)
+        {
+            dump_text << "after iteration " << i_gen << '\n' << (*this) << std::flush;
+        }
+        
+        if (binary_output.dump_frequency == 1)
+        {
+            dump_binary.open(binary_output.dump_filename, std::ios::binary);
+            WRITE_BINARY(dump_binary, *this);
+            dump_binary.close();
+        }
+        
+        i_gen++; ///now i_gen == 1
+        ///end of initialization iteration
+        
+        t_bestit  = t_best;
+        
+        //---assign pointers to current ("old") and new population---
+        
+        i_pta_old = 0;
+        i_pta_new = &ta_pop[i_NP] - ta_pop;
+        
+    }  ///if (l_nfeval == 0)
+    
+    else ///means restart from last time
+    {
+        ++i_gen;
+        objective_function = &evaluate;
+        restarting_loop = 1;
+    }
+    
+    //------Iteration loop--------------------------------------------
+    
+    //Note that kbhit() needs conio.h which is not always available under Unix.
+    do
+    {
+        //----computer dithering factor (if needed)-----------------
+        f_dither = f_weight + genrand()*(1.0 - f_weight);
+        
+#pragma omp parallel for num_threads (NUM_THREADS)
+        //----start of loop through ensemble------------------------
+        for (i=0; i<i_NP; i++)
+        {
+            
+#pragma omp critical (line181core)
+            {
             ///do for every population member
             permute(ia_urn2,URN_DEPTH,i_NP,i, &generator); //Pick 4 random and distinct
 
@@ -322,10 +682,14 @@ void DE::optimize() {
                         t_tmp.fa_vector[j] = fa_maxbound[j]+genrand()*(t_origin.fa_vector[j] - fa_maxbound[j]);
                     }
                 }
+            }
 
             ///computes the cost function
             //------Trial mutation now in t_tmp-----------------
             t_tmp = objective_function(i_D,t_tmp,&l_nfeval,&ta_pop[i_pta_old +0],i_NP);  // Evaluate mutant in t_tmp[]
+            
+#pragma omp critical (line335core)
+            {
             restarting_loop = 0;
             
             if (b_bs_flag)
@@ -400,7 +764,9 @@ void DE::optimize() {
             byteSize = sizeof(*this);
             memcpy(CRASH_SAVE, reinterpret_cast<const char*> (this), byteSize);
         }
+        }
         
+#pragma omp atomic
         ++i_gen;
         
     } while (!terminate(buffer) && ( ((text_output.output_frequency >= 1) && ((i_gen-1)%text_output.output_frequency == 0))? bool(output_text<<buffer<<std::flush):1));
