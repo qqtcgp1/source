@@ -262,7 +262,7 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     ///#pragma omp critical(first_eval)
     if (first_time) {   ///i_D == -1 means it's a restart
         for (int i = 0; i < NUM_THREADS; ++i) {
-            ///initialize files for the threads.
+            ///initialize files for the threads. each thread is assigned one file, which is postfixed with _0, _1...based on the thread number.
             char copied_filename[100];
             strcpy(copied_filename, original_filename);
             insert_postfix(copied_filename, i);
@@ -270,10 +270,9 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
             
             ///initialize commands to run FEBio
             command[i] = (char*)malloc(200);
-            strcpy(command[i], RUN_FEBIO_COMMAND);
-            strcat(command[i], " -i ");
+            ///strcpy(command[i], RUN_FEBIO_COMMAND);
+            ///strcat(command[i], " -i ");
             strcat(command[i], copied_filename);
-            strcat(command[i], " \n");
             
             ///initialize file names of log files
             log_filename[i] = (char*)malloc(100);
@@ -293,7 +292,9 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     ////change_parameters( 0.0200, 0.1000);
     
     ///system(command[thread_num]);
-    char* arguments[] = {"./febio2.osx", "-nosplash", "-i", "./27Jan_0.feb"};
+    char* arguments[4] = {"./febio2.osx", "-nosplash", "-i"};
+    arguments[3] = (char*)malloc(100);
+    strcpy(arguments[3], command[thread_num]);
     febio(4, arguments);
     
     
