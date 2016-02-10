@@ -10,8 +10,6 @@
 #include "file_processing.h"
 #include "../febiosource_osx2.4.0_icccompile_asfunction/FEBio2/FEBio.h"
 
-#include "omp.h"
-
 
 gpc_polygon* P_TRUE_DATA = nullptr;
 gpc_polygon* P_FE = nullptr;
@@ -46,7 +44,8 @@ void FEBio_input_config::initialize() {
 ///this is the function call that modifies the parameter values in the actual file.
 void FEBio_input_config::operator() (floatT E, floatT T) const{
     char postfix[7];
-    const int thread_num = omp_get_thread_num();
+    ///const int thread_num = omp_get_thread_num();
+    const int thread_num = 0;
     std::string new_string(file_name);
     sprintf(postfix, "_%d", thread_num);
     new_string.insert(file_name.length() - 4,postfix);
@@ -141,13 +140,11 @@ floatT compare( const floatTArray3D& FE_outcome ) {
     
     static DE registration(1, 0, 1, 2, 20, 0.85, 1, registration_min_bound, registration_max_bound, 100, -999,1e-6,1e-5,  &evaluate2,0);
     
-    std::cout << "71\n";
     ///The block below should be ran only when the function is executed for the first time
     if (first_time) {
         int local_num_polypts;
         read_true_data( "true_data.dat", &true_data_left[0], &true_data_right[0], num_time_step);
         
-        std::cout << "72\n";
         for (int i = 0; i < num_time_step; ++i)
         {
             ///using true data (OCT video) or idealized data (from FE model). The MACRO is found in the file 'define.h'. The two blocks looks nearly the same; only the right hand side of the assignment expressions are different.
@@ -177,26 +174,25 @@ floatT compare( const floatTArray3D& FE_outcome ) {
 
             
         }  ///end for (i)
+        
     }     ////end if (first_time)
     
-    std::cout << "73\n";
+    
     ///the rest are executed each time of function evaluation
     std::vector<gpc_vertex> vertices_FE(num_poly_pts);
     gpc_vertex_list v_list_FE = {.num_vertices = num_poly_pts, .vertex = &vertices_FE[0]};
     gpc_polygon p_int;
     gpc_polygon p_FE = {.num_contours = 1, .hole = &hole_flag, .contour = &v_list_FE};
-    std::cout << "74\n";
+    
     std::vector<floatT> cost(num_time_step);
     for (int i = 0; i < num_time_step; ++i) {
-        std::cout << "81\n";
         for (int j = 0; j < num_poly_pts; ++j) {
             vertices_FE[j].x = FE_outcome[i][j][0];
             vertices_FE[j].y = FE_outcome[i][j][2];
         }
-        std::cout << "82\n";
         floatT pminx = std::min_element(p_FE.contour -> vertex, p_FE.contour -> vertex + p_FE.contour->num_vertices, cmp_x) -> x;
         floatT pminy = std::min_element(p_FE.contour -> vertex, p_FE.contour -> vertex + p_FE.contour->num_vertices, cmp_y) -> y;
-        std::cout << "83\n";
+        
         
         gpc_translate(&p_FE, -pminx, -pminy);
         
@@ -213,12 +209,12 @@ floatT compare( const floatTArray3D& FE_outcome ) {
         //gpc_write_polygon(p2file, 1, P_TRUE_DATA);
         
         //fclose(p1file); fclose(p2file);
-        std::cout << "84\n";
-        registration.clean(); std::cout << "85\n";registration.objective_function = &evaluate2;
-        std::cout << "86\n";registration.optimize2();std::cout << "87\n";
-        cost[i] = floatT(1.0 + 2.0*registration.best_cost() / (gpc_polygon_area(&p_FE) + gpc_polygon_area(&array_p_true_data[i])));std::cout << "88\n";
+
+        registration.clean(); registration.objective_function = &evaluate2;
+        registration.optimize();
+        cost[i] = floatT(1.0 + 2.0*registration.best_cost() / (gpc_polygon_area(&p_FE) + gpc_polygon_area(&array_p_true_data[i])));
     }
-    std::cout << "75\n";
+    
     first_time = 0;
     return 100.0*((floatT)gsl_stats_mean(&cost[0], 1, num_time_step));
 }
@@ -249,7 +245,7 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     const int pop_num = (*l_nfeval)%i_NP + 1;
     const int iteration_num = (*l_nfeval)/i_NP;
     
-    #pragma omp atomic
+    ///#pragma omp atomic
     (*l_nfeval)++;  //increment function evaluation count
     
     ///static variables are created only once, and are shared between threads.
@@ -263,7 +259,7 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     
     static const struct Matlab_output_data Matlab_output_data = read_Matlab_output( MATLAB_OUTPUT );
     
-    #pragma omp critical(first_eval)
+    ///#pragma omp critical(first_eval)
     if (first_time) {   ///i_D == -1 means it's a restart
         for (int i = 0; i < NUM_THREADS; ++i) {
             ///initialize files for the threads. each thread is assigned one file, which is postfixed with _0, _1...based on the thread number.
@@ -274,7 +270,8 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
             
             ///initialize commands to run FEBio
             command[i] = (char*)malloc(200);
-            
+            ///strcpy(command[i], RUN_FEBIO_COMMAND);
+            ///strcat(command[i], " -i ");
             strcat(command[i], copied_filename);
             
             ///initialize file names of log files
@@ -282,27 +279,24 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
             strcpy(log_filename[i],copied_filename);
             strcpy(&log_filename[i][strlen(log_filename[i])-3],"log");
         }
-        first_time = 0;
     }
     
-    #pragma omp critical(std_cout)
-    std::cout << "evaluating "<< pop_num <<"th member in " << iteration_num << "th iteration...\n"<< "parameters = " << t_tmp.fa_vector[0] << "  " << t_tmp.fa_vector[1] << "\n";
-    std::cout << "1\n";
-    const int thread_num = omp_get_thread_num();
-    #pragma omp critical(eval)
+    ///#pragma omp critical(std_cout)
+    {
+        std::cout << "evaluating "<< pop_num <<"th member in " << iteration_num << "th iteration...\n"<< "parameters = " << t_tmp.fa_vector[0] << "  " << t_tmp.fa_vector[1] << "\n";
+    }
+    const int thread_num = 0;
+    ///#pragma omp critical(extra)
     ///edit the FEBio input file, just change the relevant parameters.
     change_parameters( t_tmp.fa_vector[0], t_tmp.fa_vector[1]);
-
+    ////change_parameters( 0.0200, 0.1000);
+    
+    ///system(command[thread_num]);
     char* arguments[4] = {"./febio2.osx", "-nosplash", "-i"};
-    std::cout << "2\n";
-#pragma omp critical(eval)
-    {
     arguments[3] = (char*)malloc(100);
     strcpy(arguments[3], command[thread_num]);
-    }
-    std::cout << "3\n";
     febio(4, arguments);
-    std::cout << "4\n";
+    
     
     ///passing the time taken by FEBio in seconds
     /*if (FE_running_time) {
@@ -311,9 +305,7 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
      }*/
     ///read the FEBio log file for the boundary_nodes
     
-#pragma omp critical(eval)
-    {
-        std::cout << "6\n";
+    
     ///check if log file contains "E R R O R   T E R M I N A T I O N" at the end of the file
     FileSizeT fileSize = get_filesize( log_filename[thread_num]);
     std::ifstream stream(log_filename[thread_num], std::ios::in);
@@ -323,26 +315,24 @@ t_pop evaluate(const int i_D, t_pop& t_tmp, long *const l_nfeval, t_pop *const t
     stream.close();
     char* result = nullptr;
     result = strstr(end_of_file, " E R R O R ");
-    std::cout << "7\n";
+    
     ///if it does contain this, then this particular member is invalid, assign it a maximal cost.
-    if (result != nullptr)
+    if (result != nullptr) {
+        std::cout << "5\n";
         t_tmp.fa_cost[0] = 100.0;
-        
-    else {
-        std::cout << "8\n";
-        const floatTArray3D FE_outcome = read_FEBio_log(log_filename[thread_num],Matlab_output_data.n_boundary_nodes, Matlab_output_data.boundary_node_index);
-    std::cout << "88\n";
-        ///compare the boundary_nodes, using Matlab Engine, with the true data, and produce a cost
-        ///#pragma omp critical(extra)
-        t_tmp.fa_cost[0] = compare(FE_outcome);
-        std::cout << "888\n";
+        return t_tmp;
     }
-    }
-    std::cout << "5\n";
-#pragma omp critical(std_cout)
+    
+    const floatTArray3D FE_outcome = read_FEBio_log(log_filename[thread_num],Matlab_output_data.n_boundary_nodes, Matlab_output_data.boundary_node_index);
+    
+    ///compare the boundary_nodes, using Matlab Engine, with the true data, and produce a cost
+    ///#pragma omp critical(extra)
+    t_tmp.fa_cost[0] = compare(FE_outcome);
+    
+    ///#pragma omp critical(std_cout)
     std::cout << pop_num << "th cost = " << t_tmp.fa_cost[0] << "\n\n";
     
-    
+    first_time = 0;
     return(t_tmp);
 }
 

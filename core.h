@@ -162,8 +162,6 @@ public:
     
     void optimize();
     
-    void optimize2();////a version without parallel
-    
     floatT best_cost() { return t_best.fa_cost[0]; }
     
     
